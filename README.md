@@ -24,7 +24,7 @@ async_result result;
 bool is_done = async_is_done(runtime, future, &result);
 ```
 
-And finally, destroying the runtime is not needed at the end of the program, but if necessary you cans imply do:
+And finally, destroying the runtime is not needed at the end of the program, but if necessary you can simply do:
 ```
 async_destroy_runtime(runtime);
 ```
