@@ -19,6 +19,12 @@ Reaping the future can be done either in a syncronous or asyncronous way with th
 ```
 /* sync */
 async_result result = async_await(runtime, future);
+
+/* sync many */
+async_result *results = async_await_many(runtime, futures, future_count);
+...
+free(results);
+
 /* async */
 async_result result;
 bool is_done = async_is_done(runtime, future, &result);
