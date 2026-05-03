@@ -55,6 +55,8 @@ async_runtime async_create_runtime(uint16_t thread_count) {
 	queue->data = (async_task**)malloc(queue->size * sizeof(async_task*));
 	assert(queue->data != NULL);
 	pthread_mutex_init(&queue->lock, NULL);
+	pthread_cond_init(&queue->not_empty, NULL);
+	pthread_cond_init(&queue->task_done, NULL);
 
 	// setting up the thread pool
 	runtime->active = true;
