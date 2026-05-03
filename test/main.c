@@ -1,6 +1,7 @@
 #include "../include/async.h"
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 
 async_result hello_world_async(async_arg arg) {
@@ -9,6 +10,8 @@ async_result hello_world_async(async_arg arg) {
 	return (async_result)((uintptr_t)arg + 1);
 }
 
+async_result nop(async_arg arg) { return (async_result)arg; }
+
 int main() {
 	printf("creating runtime...\n");
 	async_runtime runtime = async_create_runtime(2);
@@ -16,6 +19,7 @@ int main() {
 
 	printf("dispatching...\n");
 
+	// sync await test
 	{
 		async_future future1 = async_dispatch(runtime, hello_world_async, (async_arg)1);
 		async_future future2 = async_dispatch(runtime, hello_world_async, (async_arg)2);
@@ -33,6 +37,7 @@ int main() {
 		free(results);
 	}
 
+	// sync await_many test
 	{
 
 		async_future future1 = async_dispatch(runtime, hello_world_async, (async_arg)1);
@@ -49,6 +54,16 @@ int main() {
 		printf("awaited. result2: %p\n", (void*)res2);
 		printf("awaited. result3: %p\n", (void*)res3);
 		printf("awaited. result4: %p\n", (void*)res4);
+	}
+
+	// sync await runtime stress
+	{
+		for (size_t i = 0; i < 100000; i++) {
+			async_future future = async_dispatch(runtime, nop, (async_arg)i);
+
+			size_t result = (size_t)async_await(runtime, future);
+			assert(result == i);
+		}
 	}
 
 	printf("destroying runtime %p...\n", (void*)runtime);
