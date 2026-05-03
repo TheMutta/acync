@@ -5,7 +5,9 @@
 #include <stdlib.h>
 
 async_result hello_world_async(async_arg arg) {
+	flockfile(stdout);
 	printf("Hello, async %p!\n", arg);
+	funlockfile(stdout);
 
 	return (async_result)((uintptr_t)arg + 1);
 }
