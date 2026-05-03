@@ -175,6 +175,18 @@ async_result async_await(async_runtime runtime, async_future future) {
 	return ret;
 }
 
+async_result *async_await_many(async_runtime runtime, async_future *futures, size_t future_count) {
+	// prepare the space for the results
+	async_result *results = (async_result*)malloc(sizeof(async_result) * future_count);
+	assert(results != NULL);
+
+	for (size_t i = 0; i < future_count; ++i) {
+		results[i] = async_await(runtime, futures[i]);
+	}
+
+	return results;
+}
+
 bool async_is_done(async_runtime runtime, async_future future, async_result *result) {
 	assert(runtime != NULL);
 
