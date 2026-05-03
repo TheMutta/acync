@@ -1,7 +1,7 @@
 # aCync
 ## A C async ruintime
 
-Useful library to add a simple and lightweight async runtime in your C program.
+A KISS library to add a simple and lightweight async runtime in your C program.
 
 ### Usage
 First, include the `async.h` header in your file.
