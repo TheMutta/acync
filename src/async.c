@@ -92,16 +92,21 @@ void async_destroy_runtime(async_runtime runtime) {
 		assert(ret == 0);
 	}
 
-
-	pthread_mutex_lock(&queue->lock);
-
 	// free the queue
 	queue->size = 0;
 	queue->mask = 0;
 	queue->in = queue->out = queue->work_index = 0;
+	for (size_t i = 0; i < (queue->size); ++i) {
+		if (queue->data[i] != NULL) {
+			free(queue->data[i]);
+		}
+	}
 	free(queue->data);
 
-	// task structs are leaked
+	// destroy mutexes and conds
+	pthread_mutex_destroy(&queue->lock);
+	pthread_cond_destroy(&queue->not_empty);
+	pthread_cond_destroy(&queue->task_done);
 
 	// free the thread pool
 	free(runtime->thread_pool);
