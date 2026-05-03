@@ -8,6 +8,9 @@ add_library(acync SHARED
 	src/async.c
 )
 
+# opts
+target_compile_options(acync PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
 # setup the links and includes
 target_link_libraries(acync PRIVATE Threads::Threads)
 target_include_directories(acync PUBLIC 
@@ -20,5 +23,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
 	add_executable(acync_test
 	    test/main.c
 	)
+
+	target_compile_options(acync_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
 	target_link_libraries(acync_test PRIVATE acync Threads::Threads)
 endif()
