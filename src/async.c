@@ -103,6 +103,9 @@ void async_destroy_runtime(async_runtime runtime) {
 
 	// task structs are leaked
 
+	// free the thread pool
+	free(runtime->thread_pool);
+
 	// free the runtime
 	free(runtime);
 }
