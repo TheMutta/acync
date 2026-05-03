@@ -43,11 +43,31 @@ typedef struct {
 } async_runtime_core;
 typedef async_runtime_core* async_runtime;
 
+// create runtime
+// thread count must be greater than 0
 async_runtime async_create_runtime(uint16_t thread_count);
+
+// destroy runtime
+// runtime must not be null
 void async_destroy_runtime(async_runtime runtime);
 
+// dispatch a task
+// runtime and function must not be null
+// arg can be null
 async_future async_dispatch(async_runtime runtime, async_callback function, void *arg); 
+
+// awaits a task syncronously
+// runtime and future must not be null
 async_result async_await(async_runtime runtime, async_future future);
+
+// await many tasks specified in the futures array in order
+// runtime, futures must not be null
+// future_count must be <= than the size of the futures array
+// the futures are interpreted in strict order from element 0 to element future_count - 1
+async_result *async_await_many(async_runtime runtime, async_future *futures, size_t future_count);
+
+// await a task asyncronously
+// runtime, future and result must not be null
 bool async_is_done(async_runtime runtime, async_future future, async_result *result);
 
 #endif /* __ACYNC_ASYNC_H */
