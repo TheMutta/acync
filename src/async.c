@@ -8,12 +8,17 @@ static void *worker_thread(void *arg) {
 	async_runtime runtime = (async_runtime)arg;
 	async_task_queue *queue = &runtime->queue;
 
-	while(true) {
+	while(runtime->active) {
 		pthread_mutex_lock(&queue->lock);
 
 		// while queue empty, wait
 		while(queue->in == queue->work_index) {
 			pthread_cond_wait(&queue->not_empty, &queue->lock);
+
+			if (!runtime->active) {
+				pthread_mutex_unlock(&queue->lock);
+				return NULL;
+			}
 		}
 
 		// gets the task to execute
@@ -44,10 +49,11 @@ async_runtime async_create_runtime(uint16_t thread_count) {
 
 	// initialize the queue
 	async_task_queue *queue = &runtime->queue;
-	queue->size = 1024 * 1024; // chosen statically for now
+	queue->size = 65536; // chosen statically for now
 	queue->mask = queue->size - 1; // following the lead of kfifo
 	queue->in = queue->out = queue->work_index = 0;
-	queue->data = (async_task**)malloc(queue->size / sizeof(async_task*));
+	queue->data = (async_task**)malloc(queue->size * sizeof(async_task*));
+	assert(queue->data != NULL);
 	pthread_mutex_init(&queue->lock, NULL);
 
 	// setting up the thread pool
@@ -60,9 +66,6 @@ async_runtime async_create_runtime(uint16_t thread_count) {
 	for (uint16_t thread = 0; thread < thread_count; ++thread) {
 		int ret = pthread_create(&runtime->thread_pool[thread], NULL, worker_thread, (void*)runtime);
 		assert(ret == 0);
-
-		ret = pthread_detach(runtime->thread_pool[thread]);
-		assert(ret == 0);
 	}
 
 	return runtime;
@@ -70,11 +73,42 @@ async_runtime async_create_runtime(uint16_t thread_count) {
 
 
 void async_destroy_runtime(async_runtime runtime) {
-	// todo
+	assert(runtime != NULL);
+
+	// disable runtime
+	runtime->active = false;
+
+	async_task_queue *queue = &runtime->queue;
+	for (uint16_t thread = 0; thread < runtime->thread_count; ++thread) {
+		// wake all threads
+		pthread_mutex_lock(&queue->lock);
+		pthread_cond_broadcast(&queue->not_empty);
+		pthread_mutex_unlock(&queue->lock);
+
+		// reap threads
+		int ret = pthread_join(runtime->thread_pool[thread], NULL);
+		assert(ret == 0);
+	}
+
+
+	pthread_mutex_lock(&queue->lock);
+
+	// free the queue
+	queue->size = 0;
+	queue->mask = 0;
+	queue->in = queue->out = queue->work_index = 0;
+	free(queue->data);
+
+	// task structs are leaked
+
+	// free the runtime
+	free(runtime);
 }
 
 
 async_future async_dispatch(async_runtime runtime, async_callback function, void *arg) {
+	assert(runtime != NULL);
+
 	async_task_queue *queue = &runtime->queue;
 
 	pthread_mutex_lock(&queue->lock);
@@ -119,10 +153,13 @@ static void async_free_backlog(async_task_queue *queue) {
 }
 
 async_result async_await(async_runtime runtime, async_future future) {
+	assert(runtime != NULL);
+
 	async_task_queue *queue = &runtime->queue;
 
 	// wait for the task to be done
 	async_task *task = future;
+	pthread_mutex_lock(&queue->lock);
 	while(!task->done) {
 		pthread_cond_wait(&queue->task_done, &queue->lock);
 	}
@@ -139,6 +176,8 @@ async_result async_await(async_runtime runtime, async_future future) {
 }
 
 bool async_is_done(async_runtime runtime, async_future future, async_result *result) {
+	assert(runtime != NULL);
+
 	async_task *task = future;
 
 	if(!task->done) {
